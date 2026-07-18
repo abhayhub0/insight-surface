@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InsightSurface | Your assistant for complex account research</title>
-<meta name="description" content="InsightSurface is an assistant for complex account research that works in real time on company websites and LinkedIn pages.">
+<title>InsightSurface | Complex account research orchestration</title>
+<meta name="description" content="InsightSurface is an assistant and orchestration platform for complex account research across live pages, internal systems, documents, screenshots, and connected AI tools.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -379,6 +379,7 @@ h2 {
   .hiw-cursor { display:none; }
 }
 .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.copilot-steps { grid-template-columns:repeat(2,1fr); }
 .step {
   background:#fff; border:1px solid var(--line); border-radius:16px;
   padding:28px;
@@ -684,6 +685,7 @@ footer {
         <div class="nav-dd-menu" role="menu">
           <a href="#copilot" role="menuitem" onclick="closeDd()">Voice transcription<small>Included with every InsightSurface download</small></a>
           <a href="#copilot" role="menuitem" onclick="closeDd()">Page-aware copilot<small>Research and ask questions in context</small></a>
+          <a href="#copilot" role="menuitem" onclick="closeDd()">Research orchestration<small>Capture screenshots and route context to connected AI tools</small></a>
           <a href="#copilot" role="menuitem" onclick="closeDd()">Grounded summaries<small>Bring evidence, notes, and signals together</small></a>
         </div>
       </div>
@@ -698,8 +700,8 @@ footer {
 <header class="wrap hero">
   <div>
     <span class="eyebrow"><span class="dot"></span>LIVE DETECTION · v1.0</span>
-    <h1>Your assistant for <span class="underline">complex account research.</span></h1>
-    <p class="lede">InsightSurface is your assistant for complex account research, turning any company website or LinkedIn page into a live account intelligence workspace. Easily configure what account fit means for your team, then connect your internal systems and documents or use AI models for web research to surface grounded signals and score every account against your criteria.</p>
+    <h1>Your assistant and orchestration platform for <span class="underline">complex account research.</span></h1>
+    <p class="lede">InsightSurface turns any company website or LinkedIn page into a live account intelligence workspace. Configure what account fit means for your team, connect internal systems and documents, capture page screenshots, route context to connected AI tools such as ChatGPT, and guide the research workflow by voice.</p>
     <div class="hero-ctas">
       <a class="btn btn-lg" href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">Add to Chrome. It's free</a>
       <a class="btn btn-lg btn-ghost" href="#how">See how it works</a>
@@ -864,10 +866,10 @@ footer {
 <section id="copilot" class="wrap">
   <div class="sec-head">
     <div class="sec-eyebrow">InsightSurface Copilot</div>
-    <h2>An enterprise copilot that works on the page with you.</h2>
-    <p>InsightSurface brings research, conversation, and voice capture into one contextual workspace. Ask questions about the company in view, dictate what matters, and keep every insight connected to the account you are researching.</p>
+    <h2>An enterprise copilot that orchestrates research with you.</h2>
+    <p>InsightSurface coordinates live page context, voice instructions, internal knowledge, screenshots, and connected AI tools in one research workflow. Ask questions, direct the next research step, and keep every output connected to the account in view.</p>
   </div>
-  <div class="steps">
+  <div class="steps copilot-steps">
     <div class="step">
       <div class="step-num">VOICE</div>
       <h3>Built-in voice transcription</h3>
@@ -879,9 +881,14 @@ footer {
       <p>Ask questions while browsing a company website or LinkedIn page. The copilot keeps the current account and its grounded research in context.</p>
     </div>
     <div class="step">
+      <div class="step-num">ORCHESTRATE</div>
+      <h3>Screenshot and AI orchestration</h3>
+      <p>Capture the page in view and send its screenshot and research context to connected AI workspaces such as ChatGPT, directed through the voice copilot.</p>
+    </div>
+    <div class="step">
       <div class="step-num">CLARITY</div>
       <h3>Grounded account summaries</h3>
-      <p>Bring page evidence, connected data, voice notes, and research signals together in one clear view for faster account decisions.</p>
+      <p>Bring page evidence, internal data, documents, voice notes, and AI research outputs together in one clear view for faster account decisions.</p>
     </div>
   </div>
 </section>
