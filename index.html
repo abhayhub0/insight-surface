@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insight Surface — Complex account research, on the page you're already on</title>
+<meta name="description" content="Insight Surface is a free Chrome extension that runs complex account research — tech stack, support volume, transaction volume, team composition and more — in real time, on any website or LinkedIn page.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #FAFBFD;
+  --ink: #0E1623;
+  --ink-soft: #465060;
+  --ink-faint: #8B94A5;
+  --line: #E3E8F0;
+  --signal: #14935E;        /* detection green */
+  --signal-soft: #E6F6EE;
+  --action: #2545E8;        /* CTA blue */
+  --action-dark: #1B36C2;
+  --chip-bg: #FFFFFF;
+  --code-bg: #F1F4F9;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+.uc { scroll-margin-top:84px; }
+body {
+  font-family:'Inter',-apple-system,sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+::selection { background:var(--signal-soft); color:var(--signal); }
+
+.wrap { max-width:1120px; margin:0 auto; padding:0 24px; }
+
+/* ── NAV ─────────────────────────── */
+nav {
+  position:sticky; top:0; z-index:50;
+  background:rgba(250,251,253,0.85);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.nav-inner {
+  display:flex; align-items:center; justify-content:space-between;
+  height:64px;
+}
+.logo {
+  display:flex; align-items:center; gap:10px;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px;
+  color:var(--ink); text-decoration:none; letter-spacing:-0.02em;
+}
+.logo-mark {
+  width:28px; height:28px; border-radius:8px;
+  background:var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.logo-mark::after {
+  content:''; width:10px; height:10px; border-radius:50%;
+  background:var(--signal);
+  box-shadow:0 0 0 3px rgba(20,147,94,0.25);
+}
+.nav-links { display:flex; align-items:center; gap:28px; }
+.nav-links a {
+  color:var(--ink-soft); text-decoration:none; font-size:14px; font-weight:500;
+  transition:color .15s;
+}
+.nav-links a:hover { color:var(--ink); }
+
+/* nav dropdown */
+.nav-dd { position:relative; }
+.nav-dd > button {
+  display:flex; align-items:center; gap:7px;
+  background:none; border:none; cursor:pointer;
+  color:var(--ink-soft); font-family:'Inter',sans-serif;
+  font-size:14px; font-weight:500; padding:8px 0;
+  transition:color .15s;
+}
+.nav-dd > button:hover, .nav-dd.open > button { color:var(--ink); }
+.nav-dd > button:focus-visible { outline:3px solid rgba(37,69,232,0.3); outline-offset:2px; border-radius:6px; }
+.nav-dd-chev {
+  width:7px; height:7px;
+  border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor;
+  transform:rotate(45deg) translateY(-1px); transition:transform .18s;
+}
+.nav-dd.open .nav-dd-chev { transform:rotate(225deg) translateY(-1px); }
+.nav-dd-menu {
+  position:absolute; top:calc(100% + 10px); left:50%; transform:translateX(-50%) translateY(-6px);
+  min-width:230px; background:#fff; border:1px solid var(--line); border-radius:14px;
+  box-shadow:0 20px 50px -18px rgba(14,22,35,0.22);
+  padding:8px; opacity:0; visibility:hidden; transition:opacity .18s, transform .18s, visibility .18s;
+  z-index:60;
+}
+.nav-dd.open .nav-dd-menu { opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
+.nav-dd-menu a {
+  display:block; padding:10px 14px; border-radius:9px;
+  color:var(--ink); font-size:14px; font-weight:500;
+}
+.nav-dd-menu a:hover { background:var(--code-bg); }
+.nav-dd-menu a small {
+  display:block; font-size:12px; font-weight:400; color:var(--ink-faint); margin-top:1px;
+}
+.nav-links a.btn, .nav-links a.btn:hover { color:#fff; }
+a.btn, a.btn:hover { color:#fff; }
+a.btn-ghost, a.btn-ghost:hover { color:var(--ink); }
+.btn {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--action); color:#fff;
+  font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+  padding:10px 20px; border-radius:10px; text-decoration:none;
+  transition:background .15s, transform .15s;
+  border:none; cursor:pointer;
+}
+.btn:hover { background:var(--action-dark); transform:translateY(-1px); }
+.btn:focus-visible { outline:3px solid rgba(37,69,232,0.35); outline-offset:2px; }
+.btn-lg { font-size:16px; padding:14px 28px; border-radius:12px; }
+.btn-ghost {
+  background:transparent; color:var(--ink); border:1.5px solid var(--line);
+}
+.btn-ghost:hover { background:#fff; border-color:var(--ink-faint); }
+
+/* ── HERO ────────────────────────── */
+.hero {
+  display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;
+  padding:88px 0 96px;
+}
+.eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500;
+  color:var(--signal); background:var(--signal-soft);
+  padding:6px 12px; border-radius:99px; margin-bottom:24px;
+  letter-spacing:0.02em;
+}
+.eyebrow .dot {
+  width:7px; height:7px; border-radius:50%; background:var(--signal);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(20,147,94,0.4); }
+  50% { box-shadow:0 0 0 6px rgba(20,147,94,0); }
+}
+h1 {
+  font-family:'Space Grotesk',sans-serif; font-weight:700;
+  font-size:clamp(38px,4.6vw,56px); line-height:1.06; letter-spacing:-0.03em;
+  margin-bottom:22px;
+}
+h1 .underline {
+  position:relative; white-space:nowrap;
+}
+h1 .underline::after {
+  content:''; position:absolute; left:0; right:0; bottom:4px; height:10px;
+  background:var(--signal-soft); z-index:-1; border-radius:3px;
+}
+.hero p.lede {
+  font-size:18px; color:var(--ink-soft); max-width:46ch; margin-bottom:36px;
+}
+.hero-ctas { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+.hero-meta {
+  margin-top:22px; font-size:13px; color:var(--ink-faint);
+  display:flex; gap:18px; flex-wrap:wrap;
+}
+.hero-meta span { display:flex; align-items:center; gap:6px; }
+
+/* ── BROWSER DEMO ───────────────── */
+.demo {
+  background:#fff; border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 24px 60px -24px rgba(14,22,35,0.18), 0 4px 16px -8px rgba(14,22,35,0.08);
+  overflow:hidden;
+}
+.demo-bar {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px; border-bottom:1px solid var(--line);
+  background:var(--code-bg);
+}
+.demo-dots { display:flex; gap:6px; }
+.demo-dots i { width:10px; height:10px; border-radius:50%; background:#D5DBE5; }
+.demo-url {
+  flex:1; font-family:'JetBrains Mono',monospace; font-size:12px;
+  color:var(--ink-soft); background:#fff; border:1px solid var(--line);
+  border-radius:8px; padding:6px 12px;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+.demo-ext {
+  width:26px; height:26px; border-radius:7px; background:var(--ink);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  position:relative;
+}
+.demo-ext::after {
+  content:''; width:9px; height:9px; border-radius:50%; background:var(--signal);
+}
+.demo-body { padding:20px; }
+.demo-label {
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+  color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.08em;
+  margin-bottom:14px; display:flex; align-items:center; gap:8px;
+}
+.scanline {
+  flex:1; height:1px;
+  background:linear-gradient(90deg, var(--line), transparent);
+}
+.chips { display:flex; flex-direction:column; gap:10px; }
+.chip {
+  display:flex; align-items:center; gap:12px;
+  background:var(--chip-bg); border:1px solid var(--line); border-radius:11px;
+  padding:11px 14px;
+  opacity:0; transform:translateY(8px);
+  animation:chipIn .5s cubic-bezier(0.2,0.8,0.3,1) forwards;
+}
+.chip:nth-child(1){ animation-delay:.4s; }
+.chip:nth-child(2){ animation-delay:.9s; }
+.chip:nth-child(3){ animation-delay:1.4s; }
+.chip:nth-child(4){ animation-delay:1.9s; }
+.chip:nth-child(5){ animation-delay:2.4s; }
+@keyframes chipIn { to { opacity:1; transform:translateY(0); } }
+.chip-icon {
+  width:34px; height:34px; border-radius:9px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px;
+  color:#fff;
+}
+.chip-info { flex:1; min-width:0; }
+.chip-name { font-weight:600; font-size:14px; }
+.chip-cat { font-size:12px; color:var(--ink-faint); }
+.chip-conf {
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+  color:var(--signal); background:var(--signal-soft);
+  padding:4px 10px; border-radius:7px; white-space:nowrap;
+}
+.demo-fit {
+  margin-top:16px; padding:14px 16px;
+  background:linear-gradient(135deg, #F2FBF6, #EAF7F0);
+  border:1px solid #CBEBD9; border-radius:11px;
+  display:flex; align-items:center; gap:12px;
+  opacity:0; animation:chipIn .5s ease forwards; animation-delay:3s;
+}
+.fit-score {
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:24px;
+  color:var(--signal);
+}
+.fit-text { font-size:13px; color:var(--ink-soft); }
+.fit-text strong { color:var(--ink); }
+
+/* ── LOGO STRIP ─────────────────── */
+.strip {
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:22px 0; background:#fff;
+}
+.strip-inner {
+  display:flex; align-items:center; justify-content:center; gap:36px;
+  flex-wrap:wrap;
+  font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--ink-faint);
+}
+.strip-inner b { color:var(--ink-soft); font-weight:500; }
+
+/* ── SECTIONS ───────────────────── */
+section { padding:96px 0; }
+.sec-head { max-width:640px; margin-bottom:56px; }
+.sec-eyebrow {
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+  color:var(--signal); text-transform:uppercase; letter-spacing:0.1em;
+  margin-bottom:14px;
+}
+h2 {
+  font-family:'Space Grotesk',sans-serif; font-weight:700;
+  font-size:clamp(28px,3.4vw,40px); line-height:1.12; letter-spacing:-0.02em;
+  margin-bottom:16px;
+}
+.sec-head p { font-size:17px; color:var(--ink-soft); }
+
+/* how it works */
+.hiw-anim {
+  background:#fff; border:1px solid var(--line); border-radius:16px;
+  padding:26px 26px 22px; margin-bottom:32px;
+  box-shadow:0 16px 44px -28px rgba(14,22,35,0.16);
+}
+.hiw-stage {
+  display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:18px;
+  align-items:stretch;
+}
+.hiw-card {
+  border:1px solid var(--line); border-radius:12px; padding:16px;
+  position:relative; overflow:hidden; min-height:148px;
+  background:var(--code-bg);
+}
+.hiw-card .hiw-tag {
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600;
+  letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint);
+  margin-bottom:10px;
+}
+.hiw-arrow {
+  align-self:center; color:var(--ink-faint); font-size:18px;
+  font-family:'Space Grotesk',sans-serif;
+}
+/* phase highlighting: 9s loop, 3 phases */
+@keyframes phaseGlow1 { 0%,30% { border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-soft); } 33%,100% { border-color:var(--line); box-shadow:none; } }
+@keyframes phaseGlow2 { 0%,30% { border-color:var(--line); box-shadow:none; } 33%,63% { border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-soft); } 66%,100% { border-color:var(--line); box-shadow:none; } }
+@keyframes phaseGlow3 { 0%,63% { border-color:var(--line); box-shadow:none; } 66%,96% { border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-soft); } 100% { border-color:var(--line); box-shadow:none; } }
+.hiw-card:nth-of-type(1){ animation:phaseGlow1 9s infinite; }
+.hiw-card:nth-of-type(3){ animation:phaseGlow2 9s infinite; }
+.hiw-card:nth-of-type(5){ animation:phaseGlow3 9s infinite; }
+
+/* phase 1: install — cursor clicks the button */
+.hiw-install { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.hiw-chrome-btn {
+  background:var(--action); color:#fff; font-size:12px; font-weight:600;
+  padding:8px 14px; border-radius:8px; position:relative;
+}
+@keyframes btnPress { 0%,8% { transform:scale(1); } 12% { transform:scale(0.94); } 16%,100% { transform:scale(1); } }
+.hiw-chrome-btn { animation:btnPress 9s infinite; }
+.hiw-cursor {
+  position:absolute; width:14px; height:14px; pointer-events:none;
+  border-left:2px solid var(--ink); border-bottom:2px solid var(--ink);
+  transform:rotate(45deg);
+  left:84px; top:88px;
+  animation:cursorMove 9s infinite;
+}
+@keyframes cursorMove {
+  0% { left:120px; top:110px; opacity:0; }
+  5% { opacity:1; }
+  10% { left:78px; top:74px; }
+  14% { left:78px; top:74px; transform:rotate(45deg) scale(0.85); }
+  20% { opacity:0; }
+  100% { left:120px; top:110px; opacity:0; }
+}
+.hiw-installed {
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--signal);
+  opacity:0; animation:fadeP1 9s infinite;
+}
+@keyframes fadeP1 { 0%,14% { opacity:0; } 18%,30% { opacity:1; } 33%,100% { opacity:0; } }
+
+/* phase 2: signals pop in */
+.hiw-sig {
+  display:flex; align-items:center; gap:8px;
+  background:#fff; border:1px solid var(--line); border-radius:8px;
+  padding:6px 10px; margin-bottom:7px;
+  font-size:11.5px; font-weight:500;
+  opacity:0; transform:translateY(6px);
+}
+.hiw-sig .pct { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--signal); font-weight:600; }
+.hiw-sig i { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.hiw-sig:nth-child(2) { animation:sigIn1 9s infinite; }
+.hiw-sig:nth-child(3) { animation:sigIn2 9s infinite; }
+.hiw-sig:nth-child(4) { animation:sigIn3 9s infinite; }
+@keyframes sigIn1 { 0%,35% { opacity:0; transform:translateY(6px); } 40%,63% { opacity:1; transform:translateY(0); } 66%,100% { opacity:0; } }
+@keyframes sigIn2 { 0%,42% { opacity:0; transform:translateY(6px); } 47%,63% { opacity:1; transform:translateY(0); } 66%,100% { opacity:0; } }
+@keyframes sigIn3 { 0%,49% { opacity:0; transform:translateY(6px); } 54%,63% { opacity:1; transform:translateY(0); } 66%,100% { opacity:0; } }
+
+/* phase 3: chat + fit score */
+.hiw-q {
+  background:#fff; border:1px solid var(--line); border-radius:8px;
+  padding:7px 10px; font-size:11.5px; margin-bottom:8px;
+  opacity:0; animation:p3a 9s infinite;
+}
+.hiw-a {
+  background:var(--signal-soft); border:1px solid #CBEBD9; border-radius:8px;
+  padding:7px 10px; font-size:11.5px; color:#0F6E48;
+  opacity:0; animation:p3b 9s infinite;
+}
+.hiw-fitline {
+  margin-top:10px; display:flex; align-items:center; gap:8px;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; color:var(--signal);
+  opacity:0; animation:p3c 9s infinite;
+}
+.hiw-fitline small { font-family:'Inter',sans-serif; font-weight:500; font-size:11px; color:var(--ink-soft); }
+@keyframes p3a { 0%,66% { opacity:0; } 71%,96% { opacity:1; } 100% { opacity:0; } }
+@keyframes p3b { 0%,74% { opacity:0; } 79%,96% { opacity:1; } 100% { opacity:0; } }
+@keyframes p3c { 0%,82% { opacity:0; } 87%,96% { opacity:1; } 100% { opacity:0; } }
+
+@media (max-width: 880px) {
+  .hiw-stage { grid-template-columns:1fr; }
+  .hiw-arrow { transform:rotate(90deg); justify-self:center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hiw-card, .hiw-chrome-btn, .hiw-cursor, .hiw-installed,
+  .hiw-sig, .hiw-q, .hiw-a, .hiw-fitline { animation:none !important; opacity:1 !important; transform:none !important; }
+  .hiw-cursor { display:none; }
+}
+.steps { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.step {
+  background:#fff; border:1px solid var(--line); border-radius:16px;
+  padding:28px;
+  transition:transform .2s, box-shadow .2s;
+}
+.step:hover {
+  transform:translateY(-3px);
+  box-shadow:0 16px 40px -20px rgba(14,22,35,0.15);
+}
+.step-num {
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+  color:var(--ink-faint); margin-bottom:18px;
+}
+.step h3 {
+  font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;
+  margin-bottom:10px; letter-spacing:-0.01em;
+}
+.step p { font-size:14.5px; color:var(--ink-soft); }
+
+/* features */
+.features { background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:40px 32px; }
+.feat h3 {
+  font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600;
+  margin-bottom:8px; display:flex; align-items:center; gap:10px;
+  letter-spacing:-0.01em;
+}
+.feat-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--signal); flex-shrink:0;
+}
+.feat p { font-size:14.5px; color:var(--ink-soft); }
+
+
+/* ── LINKEDIN DEMO ───────────────── */
+.li-section { background:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.li-demo {
+  border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  box-shadow:0 24px 60px -24px rgba(14,22,35,0.18);
+  background:var(--code-bg); width:100%;
+}
+.li-toolbar {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 16px; background:#fff; border-bottom:1px solid var(--line);
+  position:relative;
+}
+.li-toolbar .demo-dots i { width:9px; height:9px; }
+.li-url {
+  flex:1; font-family:'JetBrains Mono',monospace; font-size:11px;
+  color:var(--ink-soft); background:var(--code-bg); border:1px solid var(--line);
+  border-radius:7px; padding:5px 11px;
+}
+.li-ext-icon {
+  width:24px; height:24px; border-radius:6px; background:var(--ink);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  position:relative;
+}
+.li-ext-icon::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--signal); }
+@keyframes extPress { 0%,16% { transform:scale(1); box-shadow:none; } 19% { transform:scale(0.85); } 22%,30% { transform:scale(1); box-shadow:0 0 0 4px var(--signal-soft); } 36%,100% { transform:scale(1); box-shadow:none; } }
+.li-ext-icon { animation:extPress 12s infinite; }
+
+.li-body { position:relative; height:430px; overflow:hidden; }
+
+/* the LinkedIn-style page */
+.li-page { position:absolute; inset:0; padding:0; }
+.li-banner { height:84px; background:linear-gradient(110deg,#0A66C2,#1B7FD4 60%,#54A3E8); }
+.li-pagecard { background:#fff; border-bottom:1px solid var(--line); padding:0 24px 18px; }
+.li-avatar {
+  width:64px; height:64px; border-radius:12px; background:var(--ink);
+  border:3px solid #fff; margin-top:-32px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; color:#fff; font-size:22px;
+}
+.li-coname { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; margin-top:10px; letter-spacing:-0.01em; }
+.li-cosub { font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+.li-costats { font-size:11.5px; color:var(--ink-faint); margin-top:6px; }
+.li-tabs { display:flex; gap:20px; margin-top:14px; font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+.li-tabs span:first-child { color:#0A66C2; border-bottom:2px solid #0A66C2; padding-bottom:6px; }
+.li-feedline { height:11px; border-radius:5px; background:#E9EDF3; margin:14px 24px 0; }
+.li-feedline.short { width:62%; }
+.li-feedline.mid { width:80%; }
+
+/* the Insight Surface side panel sliding in */
+.li-panel {
+  position:absolute; top:0; right:0; bottom:0; width:262px;
+  background:#fff; border-left:1px solid var(--line);
+  box-shadow:-16px 0 40px -16px rgba(14,22,35,0.22);
+  padding:16px;
+  transform:translateX(105%);
+  animation:panelSlide 12s infinite;
+}
+@keyframes panelSlide {
+  0%,20% { transform:translateX(105%); }
+  26%,92% { transform:translateX(0); }
+  98%,100% { transform:translateX(105%); }
+}
+.li-panel-head {
+  display:flex; align-items:center; gap:9px; padding-bottom:12px;
+  border-bottom:1px solid var(--line); margin-bottom:12px;
+}
+.li-panel-logo {
+  width:22px; height:22px; border-radius:6px; background:var(--ink);
+  display:flex; align-items:center; justify-content:center;
+}
+.li-panel-logo::after { content:''; width:7px; height:7px; border-radius:50%; background:var(--signal); }
+.li-panel-title { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; }
+.li-panel-co { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--ink-faint); }
+
+.li-scanning {
+  font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--signal);
+  display:flex; align-items:center; gap:7px; margin-bottom:10px;
+  opacity:0; animation:scanShow 12s infinite;
+}
+.li-scanning .dot { width:6px; height:6px; border-radius:50%; background:var(--signal); animation:pulse 1.2s infinite; }
+@keyframes scanShow { 0%,26% { opacity:0; } 29%,40% { opacity:1; } 44%,100% { opacity:0; } }
+
+.li-row {
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--line); border-radius:9px; padding:8px 10px; margin-bottom:7px;
+  font-size:11.5px; font-weight:500; background:#fff;
+  opacity:0; transform:translateY(6px);
+}
+.li-row i { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.li-row .pct { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:var(--signal); }
+.li-row:nth-of-type(3) { animation:rowIn1 12s infinite; }
+.li-row:nth-of-type(4) { animation:rowIn2 12s infinite; }
+.li-row:nth-of-type(5) { animation:rowIn3 12s infinite; }
+.li-row:nth-of-type(6) { animation:rowIn4 12s infinite; }
+@keyframes rowIn1 { 0%,42% { opacity:0; transform:translateY(6px); } 46%,92% { opacity:1; transform:translateY(0); } 98%,100% { opacity:0; } }
+@keyframes rowIn2 { 0%,48% { opacity:0; transform:translateY(6px); } 52%,92% { opacity:1; transform:translateY(0); } 98%,100% { opacity:0; } }
+@keyframes rowIn3 { 0%,54% { opacity:0; transform:translateY(6px); } 58%,92% { opacity:1; transform:translateY(0); } 98%,100% { opacity:0; } }
+@keyframes rowIn4 { 0%,60% { opacity:0; transform:translateY(6px); } 64%,92% { opacity:1; transform:translateY(0); } 98%,100% { opacity:0; } }
+
+.li-fit {
+  margin-top:12px; padding:12px;
+  background:linear-gradient(135deg,#F2FBF6,#EAF7F0);
+  border:1px solid #CBEBD9; border-radius:10px;
+  opacity:0; transform:scale(0.96);
+  animation:fitPop 12s infinite;
+}
+.li-fit-head {
+  display:flex; align-items:center; gap:7px;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13.5px;
+  color:#0F6E48; letter-spacing:-0.01em;
+}
+.li-fit-check {
+  width:17px; height:17px; border-radius:50%; background:var(--signal); color:#fff;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:10px; font-family:'Inter',sans-serif; flex-shrink:0;
+}
+.li-fit-head .score { margin-left:auto; font-size:21px; }
+.li-fit-sum {
+  margin-top:8px; padding-top:8px; border-top:1px solid #CBEBD9;
+  font-size:10.5px; color:var(--ink-soft); line-height:1.5;
+}
+.li-fit-sumtitle {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600;
+  letter-spacing:0.08em; text-transform:uppercase; color:#0F6E48; margin-bottom:3px;
+}
+@keyframes fitPop { 0%,68% { opacity:0; transform:scale(0.96); } 73%,92% { opacity:1; transform:scale(1); } 98%,100% { opacity:0; } }
+.li-fit .score { font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--signal); }
+
+/* cursor for the LinkedIn scene */
+.li-cursor {
+  position:absolute; width:15px; height:15px; z-index:10; pointer-events:none;
+  border-left:2.5px solid var(--ink); border-bottom:2.5px solid var(--ink);
+  transform:rotate(45deg);
+  animation:liCursor 12s infinite;
+}
+@keyframes liCursor {
+  0% { left:30%; top:55%; opacity:0; }
+  4% { opacity:1; }
+  10% { left:46%; top:38%; }
+  16% { left:calc(100% - 56px); top:18px; }
+  19% { left:calc(100% - 56px); top:18px; transform:rotate(45deg) scale(0.8); }
+  24% { opacity:1; transform:rotate(45deg) scale(1); }
+  30% { opacity:0; }
+  100% { left:30%; top:55%; opacity:0; }
+}
+
+@media (max-width: 880px) {
+  .li-body { height:470px; }
+  .li-panel { width:230px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .li-ext-icon, .li-panel, .li-scanning, .li-row, .li-fit, .li-cursor { animation:none !important; }
+  .li-panel { transform:translateX(0); }
+  .li-row, .li-fit { opacity:1; transform:none; }
+  .li-scanning, .li-cursor { display:none; }
+}
+
+
+/* ── USE CASES (accordion) ──────── */
+.uc-acc { max-width:760px; }
+.uc {
+  background:#fff; border:1px solid var(--line); border-radius:14px;
+  margin-bottom:12px; overflow:hidden;
+}
+.uc summary {
+  display:flex; align-items:center; gap:16px;
+  padding:20px 24px; cursor:pointer; list-style:none;
+  font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600;
+  letter-spacing:-0.01em; user-select:none;
+  transition:background .15s;
+}
+.uc summary::-webkit-details-marker { display:none; }
+.uc summary:hover { background:var(--code-bg); }
+.uc summary:focus-visible { outline:3px solid rgba(37,69,232,0.3); outline-offset:-3px; }
+.uc-who {
+  font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600;
+  text-transform:uppercase; letter-spacing:0.08em;
+  padding:5px 12px; border-radius:99px; flex-shrink:0;
+}
+.uc-chev {
+  margin-left:auto; flex-shrink:0;
+  width:10px; height:10px;
+  border-right:2px solid var(--ink-faint); border-bottom:2px solid var(--ink-faint);
+  transform:rotate(45deg); transition:transform .2s;
+}
+.uc[open] .uc-chev { transform:rotate(225deg); }
+.uc-body { padding:4px 24px 22px; }
+.uc-body p { font-size:14.5px; color:var(--ink-soft); margin-bottom:14px; }
+.uc-sig {
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-faint);
+  border-top:1px solid var(--line); padding-top:12px; line-height:1.7;
+}
+.uc-sig b { color:var(--ink-soft); font-weight:500; }
+@media (max-width: 880px) {
+  .uc summary { font-size:15px; padding:16px 18px; gap:12px; flex-wrap:wrap; }
+  .uc-body { padding:4px 18px 18px; }
+}
+
+/* CTA */
+.cta-band { padding:104px 0; }
+.cta-box {
+  background:var(--ink); border-radius:24px;
+  padding:72px 48px; text-align:center;
+  position:relative; overflow:hidden;
+}
+.cta-box::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(600px 300px at 50% 0%, rgba(20,147,94,0.25), transparent 70%);
+  pointer-events:none;
+}
+.cta-box h2 { color:#fff; margin-bottom:14px; position:relative; }
+.cta-box p {
+  color:#A7B0C0; font-size:17px; max-width:48ch; margin:0 auto 36px;
+  position:relative;
+}
+.cta-box .btn-lg { position:relative; background:var(--signal); }
+.cta-box .btn-lg:hover { background:#0F7A4D; }
+.cta-note {
+  margin-top:18px; font-family:'JetBrains Mono',monospace;
+  font-size:12px; color:#6B7587; position:relative;
+}
+
+/* footer */
+footer {
+  border-top:1px solid var(--line);
+  padding:32px 0; font-size:13px; color:var(--ink-faint);
+}
+.foot-inner { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.foot-inner a { color:var(--ink-soft); text-decoration:none; }
+.foot-inner a:hover { color:var(--ink); }
+
+/* responsive */
+@media (max-width: 880px) {
+  .hero { grid-template-columns:1fr; gap:48px; padding:56px 0 64px; }
+  .steps, .feat-grid { grid-template-columns:1fr; }
+  .nav-links a:not(.btn) { display:none; }
+  .nav-dd { display:none; }
+  section { padding:64px 0; }
+  .cta-box { padding:56px 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip, .demo-fit { animation:none; opacity:1; transform:none; }
+  .eyebrow .dot { animation:none; }
+  * { scroll-behavior:auto !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a href="#" class="logo"><span class="logo-mark"></span>Insight Surface</a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <div class="nav-dd" id="navDd">
+        <button type="button" aria-expanded="false" aria-haspopup="true" onclick="toggleDd(event)">
+          Use cases <span class="nav-dd-chev"></span>
+        </button>
+        <div class="nav-dd-menu" role="menu">
+          <a href="#uc-sales" role="menuitem" onclick="openUc('uc-sales')">Sales teams<small>Qualify before you sequence</small></a>
+          <a href="#uc-vc" role="menuitem" onclick="openUc('uc-vc')">VC scouts<small>Read traction from the outside</small></a>
+          <a href="#uc-rec" role="menuitem" onclick="openUc('uc-rec')">Recruiters<small>Pitch candidates with context</small></a>
+          <a href="#uc-bd" role="menuitem" onclick="openUc('uc-bd')">Partnerships &amp; BD<small>Spot integration fits instantly</small></a>
+        </div>
+      </div>
+      <a href="#features">Features</a>
+      <a class="btn" href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">
+        Add to Chrome — free
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div>
+    <span class="eyebrow"><span class="dot"></span>LIVE DETECTION · v1.0</span>
+    <h1>Account research with <span class="underline">every&nbsp;variable</span> — on the page you're already on.</h1>
+    <p class="lede">Insight Surface runs complex, real-time account research on any website or LinkedIn page, surfacing the signals that actually qualify an account — tech stack, support ticket volume, transaction volume, team composition, and hiring activity. Describe your ICP in plain English and every page gets scored against it.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-lg" href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">Add to Chrome — it's free</a>
+      <a class="btn btn-lg btn-ghost" href="#how">See how it works</a>
+    </div>
+    <div class="hero-meta">
+      <span>✓ Free forever tier</span>
+      <span>✓ Multi-signal detection</span>
+      <span>✓ Works on LinkedIn</span>
+    </div>
+  </div>
+
+  <div class="li-demo" aria-hidden="true">
+      <div class="li-toolbar">
+        <div class="demo-dots"><i></i><i></i><i></i></div>
+        <div class="li-url">linkedin.com/company/acme-payments</div>
+        <div class="li-ext-icon" title="Insight Surface"></div>
+      </div>
+      <div class="li-body">
+        <div class="li-cursor"></div>
+        <div class="li-page">
+          <div class="li-banner"></div>
+          <div class="li-pagecard">
+            <div class="li-avatar">A</div>
+            <div class="li-coname">Acme Payments</div>
+            <div class="li-cosub">Financial Services · London, England · 11–50 employees</div>
+            <div class="li-costats">12,408 followers · 47 on LinkedIn</div>
+            <div class="li-tabs"><span>Home</span><span>About</span><span>Posts</span><span>Jobs</span><span>People</span></div>
+          </div>
+          <div class="li-feedline mid"></div>
+          <div class="li-feedline short"></div>
+          <div class="li-feedline"></div>
+          <div class="li-feedline short"></div>
+        </div>
+        <div class="li-panel">
+          <div class="li-panel-head">
+            <div class="li-panel-logo"></div>
+            <div class="li-panel-title">Insight Surface</div>
+            <div class="li-panel-co">ACME PAYMENTS</div>
+          </div>
+          <div class="li-scanning"><span class="dot"></span>analysing page…</div>
+          <div class="li-row"><i style="background:#2545E8;"></i>High transaction volume <span class="pct">94%</span></div>
+          <div class="li-row"><i style="background:#7C3AED;"></i>14 SDRs · 3 hired recently <span class="pct">97%</span></div>
+          <div class="li-row"><i style="background:#D97706;"></i>Est. 12k+ tickets / month <span class="pct">89%</span></div>
+          <div class="li-row"><i style="background:#00A1E0;"></i>Salesforce + Stripe stack <span class="pct">96%</span></div>
+          <div class="li-fit">
+            <div class="li-fit-head">
+              <span class="li-fit-check">✓</span> Strong fit detected
+              <span class="score">87</span>
+            </div>
+            <div class="li-fit-sum">
+              <div class="li-fit-sumtitle">Account summary</div>
+              High-volume payments company with a scaling CX team and rising support load. Stack matches ICP. Recommended: add to sequence this week.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</header>
+
+<div class="strip">
+  <div class="wrap strip-inner">
+    <span>Detects <b>tech stack</b></span>
+    <span><b>support volume</b></span>
+    <span><b>transaction volume</b></span>
+    <span><b>team composition</b></span>
+    <span><b>hiring signals</b></span>
+    <span><b>growth indicators</b></span>
+    <span>+ more, on any page</span>
+  </div>
+</div>
+
+<section id="how" class="wrap">
+  <div class="sec-head">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>From "who are these guys?" to qualified in seconds.</h2>
+    <p>No databases to query. No ten-tab research sprawl. Insight Surface reads the page you're already on — including LinkedIn.</p>
+  </div>
+  <div class="hiw-anim" aria-hidden="true">
+    <div class="hiw-stage">
+      <div class="hiw-card">
+        <div class="hiw-tag">1 · Install</div>
+        <div class="hiw-install">
+          <div class="hiw-chrome-btn">Add to Chrome</div>
+          <div class="hiw-installed">✓ installed</div>
+        </div>
+        <div class="hiw-cursor"></div>
+      </div>
+      <div class="hiw-arrow">→</div>
+      <div class="hiw-card">
+        <div class="hiw-tag">2 · Visit any page</div>
+        <div class="hiw-sig"><i style="background:#2545E8;"></i>High transaction volume <span class="pct">94%</span></div>
+        <div class="hiw-sig"><i style="background:#7C3AED;"></i>14 SDRs · from LinkedIn <span class="pct">97%</span></div>
+        <div class="hiw-sig"><i style="background:#D97706;"></i>Heavy support load <span class="pct">89%</span></div>
+      </div>
+      <div class="hiw-arrow">→</div>
+      <div class="hiw-card">
+        <div class="hiw-tag">3 · Ask &amp; qualify</div>
+        <div class="hiw-q">Worth adding to my sequence?</div>
+        <div class="hiw-a">Yes — volume is high and the CX team is scaling.</div>
+        <div class="hiw-fitline">87 <small>fit score · strong</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">STEP 01</div>
+      <h3>Install in two clicks</h3>
+      <p>Add Insight Surface from the Chrome Web Store. No signup walls, no credit card — it starts working immediately on your next tab.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 02</div>
+      <h3>Visit any company page</h3>
+      <p>Open a prospect's website or their LinkedIn page. Insight Surface analyses it in real time and surfaces every signal it finds — stack, volumes, team size, hiring — each with a confidence score.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 03</div>
+      <h3>Ask the AI anything</h3>
+      <p>Built-in AI chat knows the page context. Ask about integrations, alternatives, or how to position against their current stack — then check the fit score before you commit pipeline.</p>
+    </div>
+  </div>
+</section>
+
+<section id="use-cases" class="wrap">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Use cases</div>
+    <h2>One panel, very different questions.</h2>
+    <p>Account research isn't just a sales problem. Anyone who has to judge a company from its public footprint gets an answer faster.</p>
+  </div>
+  <div class="uc-acc">
+    <details class="uc" id="uc-sales" open>
+      <summary><span class="uc-who" style="background:#EBF0FF;color:#2545E8;">Sales teams</span>Qualify before you sequence.<span class="uc-chev"></span></summary>
+      <div class="uc-body">
+        <p>Stop burning touches on accounts that were never a fit. Check the stack, support load, and team shape against your ICP while you're still on their LinkedIn page — then sequence only the ones that score.</p>
+        <div class="uc-sig">Signals that matter → <b>tech stack · support volume · team size · fit score</b></div>
+      </div>
+    </details>
+    <details class="uc" id="uc-vc">
+      <summary><span class="uc-who" style="background:#F3EBFF;color:#7C3AED;">VC scouts</span>Read traction from the outside.<span class="uc-chev"></span></summary>
+      <div class="uc-body">
+        <p>Headcount growth, hiring velocity, transaction volume, and tooling maturity tell you more than a pitch deck. Scan a portfolio prospect's page and see the operating signals before the first call.</p>
+        <div class="uc-sig">Signals that matter → <b>hiring velocity · headcount growth · transaction volume</b></div>
+      </div>
+    </details>
+    <details class="uc" id="uc-rec">
+      <summary><span class="uc-who" style="background:#FFF4E5;color:#D97706;">Recruiters</span>Pitch candidates with context.<span class="uc-chev"></span></summary>
+      <div class="uc-body">
+        <p>Know how fast a team is growing, which functions they're hiring into, and what they're building with — so your outreach to both clients and candidates lands with specifics, not guesses.</p>
+        <div class="uc-sig">Signals that matter → <b>open roles · team composition · recent hires · stack</b></div>
+      </div>
+    </details>
+    <details class="uc" id="uc-bd">
+      <summary><span class="uc-who" style="background:#E6F6EE;color:#14935E;">Partnerships &amp; BD</span>Spot integration fits instantly.<span class="uc-chev"></span></summary>
+      <div class="uc-body">
+        <p>See whether a potential partner already runs the platforms you integrate with, how big their customer operation is, and whether the timing signals — hiring, growth, volume — say now or later.</p>
+        <div class="uc-sig">Signals that matter → <b>platform overlap · CX scale · growth indicators</b></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section id="features" class="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Features</div>
+      <h2>Built for people who prospect for a living.</h2>
+      <p>Every feature exists to answer one question faster: is this company worth my time?</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Configure your ICP in plain English</h3>
+        <p>No filters, no rule builders. Describe your ideal customer the way you'd brief a new SDR — "fintechs in EMEA with 20+ on support, growing CX teams, running Salesforce" — and Insight Surface scores every page against it.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Multi-variable research</h3>
+        <p>Tech stack is one signal of many. Insight Surface also estimates support ticket volume, transaction volume, team composition, and hiring activity — the variables that actually qualify an account.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Real-time detection</h3>
+        <p>Live page analysis, not stale database lookups. If they switched CRMs or doubled their SDR team last quarter, Insight Surface sees today's reality — not last year's.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Works on LinkedIn</h3>
+        <p>Open any company or profile page and Insight Surface runs the same research right there — team size, headcount growth, recent hires — without you ever leaving LinkedIn.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Confidence scoring</h3>
+        <p>Every signal comes with a confidence percentage, so you know what's certain and what's worth verifying before you write the opener.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>AI chat with context</h3>
+        <p>Ask questions about the company you're looking at — volumes, team structure, competitive angles — and get answers grounded in the signals on the page.</p>
+      </div>
+      <div class="feat">
+        <h3><span class="feat-dot"></span>Fit assessment</h3>
+        <p>A single score that weighs every detected signal against your ideal customer profile, so you can prioritise accounts instead of guessing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<div class="cta-band wrap">
+  <div class="cta-box">
+    <h2>Your next account, fully researched, in one tab.</h2>
+    <p>Install Insight Surface free and see every signal your prospects are giving off — before your competitors do.</p>
+    <a class="btn btn-lg" href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">Add Insight Surface to Chrome</a>
+    <div class="cta-note">FREE · NO SIGNUP REQUIRED · WORKS INSTANTLY</div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 Insight Surface. All rights reserved.</span>
+    <span><a href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">Chrome Web Store ↗</a></span>
+  </div>
+</footer>
+
+<script>
+function toggleDd(e){
+  e.stopPropagation();
+  var dd = document.getElementById('navDd');
+  var open = dd.classList.toggle('open');
+  dd.querySelector('button').setAttribute('aria-expanded', open);
+}
+function closeDd(){
+  var dd = document.getElementById('navDd');
+  dd.classList.remove('open');
+  dd.querySelector('button').setAttribute('aria-expanded','false');
+}
+function openUc(id){
+  closeDd();
+  var el = document.getElementById(id);
+  if(el){ el.setAttribute('open',''); }
+}
+document.addEventListener('click', function(e){
+  var dd = document.getElementById('navDd');
+  if(!dd.contains(e.target)) closeDd();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeDd();
+});
+</script>
+</body>
+</html>
