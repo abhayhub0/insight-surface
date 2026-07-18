@@ -667,7 +667,7 @@ footer {
     <div class="nav-links">
       <a href="#how">How it works</a>
       <div class="nav-dd" id="navDd">
-        <button type="button" aria-expanded="false" aria-haspopup="true" onclick="toggleDd(event)">
+        <button type="button" aria-expanded="false" aria-haspopup="true" onclick="toggleDd(event, 'navDd')">
           Use cases <span class="nav-dd-chev"></span>
         </button>
         <div class="nav-dd-menu" role="menu">
@@ -677,7 +677,16 @@ footer {
           <a href="#uc-bd" role="menuitem" onclick="openUc('uc-bd')">Partnerships &amp; BD<small>Spot integration fits instantly</small></a>
         </div>
       </div>
-      <a href="#copilot">Copilot</a>
+      <div class="nav-dd" id="copilotDd">
+        <button type="button" aria-expanded="false" aria-haspopup="true" onclick="toggleDd(event, 'copilotDd')">
+          Copilot <span class="nav-dd-chev"></span>
+        </button>
+        <div class="nav-dd-menu" role="menu">
+          <a href="#copilot" role="menuitem" onclick="closeDd()">Voice transcription<small>Included with every InsightSurface download</small></a>
+          <a href="#copilot" role="menuitem" onclick="closeDd()">Page-aware copilot<small>Research and ask questions in context</small></a>
+          <a href="#copilot" role="menuitem" onclick="closeDd()">Grounded summaries<small>Bring evidence, notes, and signals together</small></a>
+        </div>
+      </div>
       <a href="#features">Features</a>
       <a class="btn" href="https://chromewebstore.google.com/detail/fit-check/kmkgiplbacjcjlbibdpcchhjodogfncf" target="_blank" rel="noopener">
         Add to Chrome for free
@@ -936,16 +945,23 @@ footer {
 </footer>
 
 <script>
-function toggleDd(e){
+function toggleDd(e, id){
   e.stopPropagation();
-  var dd = document.getElementById('navDd');
+  var dd = document.getElementById(id);
+  document.querySelectorAll('.nav-dd.open').forEach(function(other){
+    if(other !== dd){
+      other.classList.remove('open');
+      other.querySelector('button').setAttribute('aria-expanded','false');
+    }
+  });
   var open = dd.classList.toggle('open');
   dd.querySelector('button').setAttribute('aria-expanded', open);
 }
 function closeDd(){
-  var dd = document.getElementById('navDd');
-  dd.classList.remove('open');
-  dd.querySelector('button').setAttribute('aria-expanded','false');
+  document.querySelectorAll('.nav-dd.open').forEach(function(dd){
+    dd.classList.remove('open');
+    dd.querySelector('button').setAttribute('aria-expanded','false');
+  });
 }
 function openUc(id){
   closeDd();
@@ -953,8 +969,7 @@ function openUc(id){
   if(el){ el.setAttribute('open',''); }
 }
 document.addEventListener('click', function(e){
-  var dd = document.getElementById('navDd');
-  if(!dd.contains(e.target)) closeDd();
+  if(!e.target.closest('.nav-dd')) closeDd();
 });
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeDd();
